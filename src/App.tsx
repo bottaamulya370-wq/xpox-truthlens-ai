@@ -77,6 +77,7 @@ import {
   Tooltip,
   ReferenceLine
 } from 'recharts';
+import { motion, AnimatePresence } from 'motion/react';
 
 import heroImg from './assets/images/news_verification_hero_1789024082738.jpg';
 import spaceImg from './assets/images/deep_space_astronomy_1789024100060.jpg';
@@ -127,6 +128,7 @@ const SAMPLE_ARTICLES = [
 interface HistoryEntry {
   id: string;
   timestamp: string;
+  createdAt?: number;
   snippet: string;
   prediction: "Real News" | "Fake News";
   confidence: number;
@@ -216,73 +218,108 @@ export default function App() {
   const [expResult, setExpResult] = useState<ExplainabilityResult | null>(null);
 
   // History & Analytics
-  const [history, setHistory] = useState<HistoryEntry[]>([
-    {
-      id: "TL-006",
-      timestamp: "Today 14:05",
-      snippet: "The United Nations climate summit concluded today with accredited delegates...",
-      prediction: "Real News",
-      confidence: 94.8,
-      credibilityScore: 91,
-      modelUsed: "Logistic Regression (L2)",
-      fullText: SAMPLE_ARTICLES[1].text
-    },
-    {
-      id: "TL-005",
-      timestamp: "Today 13:20",
-      snippet: "MIRACLE CURE: Doctors are stunned! This secret common household spice...",
-      prediction: "Fake News",
-      confidence: 96.5,
-      credibilityScore: 18,
-      modelUsed: "Random Forest",
-      fullText: SAMPLE_ARTICLES[3].text
-    },
-    {
-      id: "TL-004",
-      timestamp: "Today 12:45",
-      snippet: "European Central Bank raises liquidity reserve benchmark for commercial lenders...",
-      prediction: "Real News",
-      confidence: 92.4,
-      credibilityScore: 89,
-      modelUsed: "Ensemble (LR + RF)",
-      fullText: "European Central Bank representatives confirmed revised liquidity reserve requirements following a policy meeting in Frankfurt. Financial institutions will implement audited capital adjustments by fourth-quarter deadlines, according to official regulatory directives."
-    },
-    {
-      id: "TL-003",
-      timestamp: "Today 11:32",
-      snippet: "SHOCKING EXCLUSIVE: Secret global cabal operates subterranean weather machine...",
-      prediction: "Fake News",
-      confidence: 98.2,
-      credibilityScore: 12,
-      modelUsed: "Ensemble (LR + RF)",
-      fullText: SAMPLE_ARTICLES[2].text
-    },
-    {
-      id: "TL-002",
-      timestamp: "Today 10:50",
-      snippet: "World Health Organization publishes global respiratory pathogen surveillance report...",
-      prediction: "Real News",
-      confidence: 96.1,
-      credibilityScore: 95,
-      modelUsed: "Ensemble (LR + RF)",
-      fullText: "The World Health Organization published its quarterly respiratory surveillance index today, reporting stable infection rates across northern hemisphere monitoring centers. Peer-reviewed epidemiological protocols were maintained across all reference laboratories."
-    },
-    {
-      id: "TL-001",
-      timestamp: "Today 10:14",
-      snippet: "NASA's James Webb Space Telescope has captured deep-field infrared imagery...",
-      prediction: "Real News",
-      confidence: 97.4,
-      credibilityScore: 94,
-      modelUsed: "Ensemble (LR + RF)",
-      fullText: SAMPLE_ARTICLES[0].text
-    }
-  ]);
+  const [csvExported, setCsvExported] = useState<boolean>(false);
+  const [history, setHistory] = useState<HistoryEntry[]>(() => {
+    const now = Date.now();
+    return [
+      {
+        id: "TL-006",
+        timestamp: "Today 14:05",
+        createdAt: now - 18 * 60 * 1000, // 18m ago (within 1h, today, 7d, all)
+        snippet: "The United Nations climate summit concluded today with accredited delegates...",
+        prediction: "Real News",
+        confidence: 94.8,
+        credibilityScore: 91,
+        modelUsed: "Logistic Regression (L2)",
+        fullText: SAMPLE_ARTICLES[1].text
+      },
+      {
+        id: "TL-005",
+        timestamp: "Today 13:20",
+        createdAt: now - 46 * 60 * 1000, // 46m ago (within 1h, today, 7d, all)
+        snippet: "MIRACLE CURE: Doctors are stunned! This secret common household spice...",
+        prediction: "Fake News",
+        confidence: 96.5,
+        credibilityScore: 18,
+        modelUsed: "Random Forest",
+        fullText: SAMPLE_ARTICLES[3].text
+      },
+      {
+        id: "TL-004",
+        timestamp: "Today 11:45",
+        createdAt: now - 3 * 3600 * 1000, // 3h ago (within today, 7d, all)
+        snippet: "European Central Bank raises liquidity reserve benchmark for commercial lenders...",
+        prediction: "Real News",
+        confidence: 92.4,
+        credibilityScore: 89,
+        modelUsed: "Ensemble (LR + RF)",
+        fullText: "European Central Bank representatives confirmed revised liquidity reserve requirements following a policy meeting in Frankfurt. Financial institutions will implement audited capital adjustments by fourth-quarter deadlines, according to official regulatory directives."
+      },
+      {
+        id: "TL-003",
+        timestamp: "Today 08:32",
+        createdAt: now - 6 * 3600 * 1000, // 6h ago (within today, 7d, all)
+        snippet: "SHOCKING EXCLUSIVE: Secret global cabal operates subterranean weather machine...",
+        prediction: "Fake News",
+        confidence: 98.2,
+        credibilityScore: 12,
+        modelUsed: "Ensemble (LR + RF)",
+        fullText: SAMPLE_ARTICLES[2].text
+      },
+      {
+        id: "TL-002",
+        timestamp: "2 days ago",
+        createdAt: now - 2 * 86400 * 1000, // 2 days ago (within 7d, all)
+        snippet: "World Health Organization publishes global respiratory pathogen surveillance report...",
+        prediction: "Real News",
+        confidence: 96.1,
+        credibilityScore: 95,
+        modelUsed: "Ensemble (LR + RF)",
+        fullText: "The World Health Organization published its quarterly respiratory surveillance index today, reporting stable infection rates across northern hemisphere monitoring centers. Peer-reviewed epidemiological protocols were maintained across all reference laboratories."
+      },
+      {
+        id: "TL-001",
+        timestamp: "4 days ago",
+        createdAt: now - 4.5 * 86400 * 1000, // 4.5 days ago (within 7d, all)
+        snippet: "NASA's James Webb Space Telescope has captured deep-field infrared imagery...",
+        prediction: "Real News",
+        confidence: 97.4,
+        credibilityScore: 94,
+        modelUsed: "Ensemble (LR + RF)",
+        fullText: SAMPLE_ARTICLES[0].text
+      },
+      {
+        id: "TL-000",
+        timestamp: "12 days ago",
+        createdAt: now - 12 * 86400 * 1000, // 12 days ago (within all only)
+        snippet: "BREAKING LEAK: Asteroid collision imminent according to suppressed observatory archives...",
+        prediction: "Fake News",
+        confidence: 97.8,
+        credibilityScore: 14,
+        modelUsed: "Ensemble (LR + RF)",
+        fullText: "BREAKING LEAK: Unverified fringe sources claim suppressed astronomical records reveal an imminent global celestial collision. Officials have dismissed the claims as unfounded viral fabrication with zero telemetry confirmation."
+      }
+    ];
+  });
 
   // Confidence vs. Credibility Trend Chart States
   const [trendFilter, setTrendFilter] = useState<'all' | 'real' | 'fake'>('all');
+  const [trendTimeframe, setTrendTimeframe] = useState<'1h' | 'today' | '7d' | 'all'>('all');
   const [showConfidenceLine, setShowConfidenceLine] = useState<boolean>(true);
   const [showCredibilityLine, setShowCredibilityLine] = useState<boolean>(true);
+  const [isTrendTransitioning, setIsTrendTransitioning] = useState<boolean>(false);
+
+  // Trigger smooth feedback transition when switching timeframe or category filters
+  useEffect(() => {
+    setIsTrendTransitioning(true);
+    const timer = setTimeout(() => {
+      setIsTrendTransitioning(false);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [trendFilter, trendTimeframe]);
+
+  // Model Comparison toggle in Dashboard ('all' | 'ensemble' | 'logisticRegression' | 'randomForest')
+  const [dashboardModelComparison, setDashboardModelComparison] = useState<'all' | 'ensemble' | 'logisticRegression' | 'randomForest'>('all');
 
   // Run initial analysis on mount without duplicating history
   useEffect(() => {
@@ -310,6 +347,7 @@ export default function App() {
         const newEntry: HistoryEntry = {
           id: `TL-00${history.length + 1}`,
           timestamp: `Today ${timeNow}`,
+          createdAt: Date.now(),
           snippet: textToAnalyze.slice(0, 75) + "...",
           prediction: pred.prediction,
           confidence: pred.confidence,
@@ -537,9 +575,87 @@ Structured text ready to paste into research reports, emails, or fact-checking d
     URL.revokeObjectURL(url);
   };
 
+  const handleExportHistoryCsv = () => {
+    if (history.length === 0) return;
+
+    const escapeCsv = (val: string | number | undefined | null): string => {
+      if (val === undefined || val === null) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const headers = [
+      "Record ID",
+      "Timestamp",
+      "Classification Prediction",
+      "Model Confidence (%)",
+      "Credibility Score (/100)",
+      "Algorithm Used",
+      "Article Snippet",
+      "Full Analyzed Text"
+    ];
+
+    const rows = history.map((entry) =>
+      [
+        escapeCsv(entry.id),
+        escapeCsv(entry.timestamp),
+        escapeCsv(entry.prediction),
+        escapeCsv(entry.confidence),
+        escapeCsv(entry.credibilityScore),
+        escapeCsv(entry.modelUsed),
+        escapeCsv(entry.snippet),
+        escapeCsv(entry.fullText)
+      ].join(',')
+    );
+
+    // Prepend UTF-8 BOM so Excel & spreadsheet tools decode Unicode without encoding glitches
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    link.setAttribute('download', `truthlens_analysis_history_${dateStamp}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setCsvExported(true);
+    setTimeout(() => {
+      setCsvExported(false);
+    }, 2500);
+  };
+
+  // Helper to determine whether an entry falls within the selected trend timeframe
+  const isWithinTrendTimeframe = (entry: HistoryEntry, timeframe: '1h' | 'today' | '7d' | 'all') => {
+    if (timeframe === 'all') return true;
+    const now = Date.now();
+    const createdAt = entry.createdAt ?? (
+      entry.timestamp.includes('Today') ? now - 2 * 3600 * 1000 :
+      entry.timestamp.includes('days ago') ? now - 3 * 86400 * 1000 : now
+    );
+    const ageMs = now - createdAt;
+
+    if (timeframe === '1h') {
+      return ageMs <= 60 * 60 * 1000;
+    }
+    if (timeframe === 'today') {
+      return ageMs <= 24 * 60 * 60 * 1000;
+    }
+    if (timeframe === '7d') {
+      return ageMs <= 7 * 24 * 60 * 60 * 1000;
+    }
+    return true;
+  };
+
   // Chronological data for Confidence vs. Credibility trendline (oldest first to newest)
   const chronologicalHistory = [...history].reverse();
-  const filteredTrendData = chronologicalHistory
+  const timeframeTrendHistory = chronologicalHistory.filter(entry =>
+    isWithinTrendTimeframe(entry, trendTimeframe)
+  );
+
+  const filteredTrendData = timeframeTrendHistory
     .filter(entry => {
       if (trendFilter === 'real') return entry.prediction === 'Real News';
       if (trendFilter === 'fake') return entry.prediction === 'Fake News';
@@ -558,10 +674,16 @@ Structured text ready to paste into research reports, emails, or fact-checking d
       spread: Math.abs(Number((entry.confidence - entry.credibilityScore).toFixed(1)))
     }));
 
-  const realTrendHistory = history.filter(h => h.prediction === 'Real News');
-  const fakeTrendHistory = history.filter(h => h.prediction === 'Fake News');
-  const avgTrendConfidence = history.length
-    ? Math.round(history.reduce((sum, h) => sum + h.confidence, 0) / history.length)
+  const realTrendHistory = timeframeTrendHistory.filter(h => h.prediction === 'Real News');
+  const fakeTrendHistory = timeframeTrendHistory.filter(h => h.prediction === 'Fake News');
+  const activeTrendSelection = timeframeTrendHistory.filter(h => {
+    if (trendFilter === 'real') return h.prediction === 'Real News';
+    if (trendFilter === 'fake') return h.prediction === 'Fake News';
+    return true;
+  });
+
+  const avgTrendConfidence = activeTrendSelection.length
+    ? Math.round(activeTrendSelection.reduce((sum, h) => sum + h.confidence, 0) / activeTrendSelection.length)
     : 0;
   const avgRealTrendCred = realTrendHistory.length
     ? Math.round(realTrendHistory.reduce((sum, h) => sum + h.credibilityScore, 0) / realTrendHistory.length)
@@ -1711,44 +1833,112 @@ Structured text ready to paste into research reports, emails, or fact-checking d
 
                 {/* Interactive Controls & Filters */}
                 <div className="flex flex-wrap items-center gap-3">
+                  {/* Timeframe selector */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-indigo-500" />
+                      Timeframe:
+                    </span>
+                    <div className="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200 text-xs font-semibold">
+                      <button
+                        id="trend-timeframe-1h-btn"
+                        type="button"
+                        onClick={() => setTrendTimeframe('1h')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                          trendTimeframe === '1h'
+                            ? 'bg-white text-indigo-900 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="Filter trendline to records from the last hour"
+                      >
+                        Last Hour
+                      </button>
+                      <button
+                        id="trend-timeframe-today-btn"
+                        type="button"
+                        onClick={() => setTrendTimeframe('today')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                          trendTimeframe === 'today'
+                            ? 'bg-white text-indigo-900 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="Filter trendline to records from today (past 24 hours)"
+                      >
+                        Today
+                      </button>
+                      <button
+                        id="trend-timeframe-7d-btn"
+                        type="button"
+                        onClick={() => setTrendTimeframe('7d')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                          trendTimeframe === '7d'
+                            ? 'bg-white text-indigo-900 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="Filter trendline to records from the last 7 days"
+                      >
+                        Last 7 Days
+                      </button>
+                      <button
+                        id="trend-timeframe-all-btn"
+                        type="button"
+                        onClick={() => setTrendTimeframe('all')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                          trendTimeframe === 'all'
+                            ? 'bg-white text-indigo-900 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="Show all historical records on trendline"
+                      >
+                        All Time
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Category filter */}
-                  <div className="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200 text-xs font-semibold">
-                    <button
-                      id="trend-filter-all-btn"
-                      type="button"
-                      onClick={() => setTrendFilter('all')}
-                      className={`px-3 py-1 rounded-lg transition-all ${
-                        trendFilter === 'all'
-                          ? 'bg-white text-slate-900 shadow-2xs font-bold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      All ({history.length})
-                    </button>
-                    <button
-                      id="trend-filter-real-btn"
-                      type="button"
-                      onClick={() => setTrendFilter('real')}
-                      className={`px-3 py-1 rounded-lg transition-all ${
-                        trendFilter === 'real'
-                          ? 'bg-white text-emerald-800 shadow-2xs font-bold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Real Only ({realTrendHistory.length})
-                    </button>
-                    <button
-                      id="trend-filter-fake-btn"
-                      type="button"
-                      onClick={() => setTrendFilter('fake')}
-                      className={`px-3 py-1 rounded-lg transition-all ${
-                        trendFilter === 'fake'
-                          ? 'bg-white text-rose-800 shadow-2xs font-bold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Fake Only ({fakeTrendHistory.length})
-                    </button>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                      <Filter className="w-3 h-3 text-slate-400" />
+                      Type:
+                    </span>
+                    <div className="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200 text-xs font-semibold">
+                      <button
+                        id="trend-filter-all-btn"
+                        type="button"
+                        onClick={() => setTrendFilter('all')}
+                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                          trendFilter === 'all'
+                            ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        All ({timeframeTrendHistory.length})
+                      </button>
+                      <button
+                        id="trend-filter-real-btn"
+                        type="button"
+                        onClick={() => setTrendFilter('real')}
+                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                          trendFilter === 'real'
+                            ? 'bg-white text-emerald-800 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Real Only ({realTrendHistory.length})
+                      </button>
+                      <button
+                        id="trend-filter-fake-btn"
+                        type="button"
+                        onClick={() => setTrendFilter('fake')}
+                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                          trendFilter === 'fake'
+                            ? 'bg-white text-rose-800 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Fake Only ({fakeTrendHistory.length})
+                      </button>
+                    </div>
                   </div>
 
                   {/* Line toggles */}
@@ -1789,88 +1979,172 @@ Structured text ready to paste into research reports, emails, or fact-checking d
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
                 <div>
                   <span className="text-slate-500 text-2xs block font-medium">Mean Model Confidence</span>
-                  <span className="text-base font-black text-indigo-900">{avgTrendConfidence}%</span>
-                  <span className="text-3xs text-indigo-700 font-semibold block mt-0.5">High Certainty</span>
+                  <span className="text-base font-black text-indigo-900">
+                    {activeTrendSelection.length > 0 ? `${avgTrendConfidence}%` : 'N/A'}
+                  </span>
+                  <span className="text-3xs text-indigo-700 font-semibold block mt-0.5">
+                    {trendTimeframe === '1h' ? 'Last Hour' : trendTimeframe === 'today' ? 'Today' : trendTimeframe === '7d' ? 'Last 7 Days' : 'All-time'} ({activeTrendSelection.length} item{activeTrendSelection.length === 1 ? '' : 's'})
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-500 text-2xs block font-medium">Real News Avg Credibility</span>
-                  <span className="text-base font-black text-emerald-700">{avgRealTrendCred} / 100</span>
-                  <span className="text-3xs text-emerald-600 font-semibold block mt-0.5">Verified Journalistic Rigor</span>
+                  <span className="text-base font-black text-emerald-700">
+                    {realTrendHistory.length > 0 ? `${avgRealTrendCred} / 100` : 'N/A'}
+                  </span>
+                  <span className="text-3xs text-emerald-600 font-semibold block mt-0.5">
+                    {realTrendHistory.length} verified item{realTrendHistory.length === 1 ? '' : 's'}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-500 text-2xs block font-medium">Fake News Avg Credibility</span>
-                  <span className="text-base font-black text-rose-700">{avgFakeTrendCred} / 100</span>
-                  <span className="text-3xs text-rose-600 font-semibold block mt-0.5">Disinformation Penalty</span>
+                  <span className="text-base font-black text-rose-700">
+                    {fakeTrendHistory.length > 0 ? `${avgFakeTrendCred} / 100` : 'N/A'}
+                  </span>
+                  <span className="text-3xs text-rose-600 font-semibold block mt-0.5">
+                    {fakeTrendHistory.length} flagged item{fakeTrendHistory.length === 1 ? '' : 's'}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-500 text-2xs block font-medium">Fake News Spread Gap</span>
-                  <span className="text-base font-black text-amber-700">+{disinformationSpread} pts</span>
+                  <span className="text-base font-black text-amber-700">
+                    {fakeTrendHistory.length > 0 ? `+${disinformationSpread} pts` : 'N/A'}
+                  </span>
                   <span className="text-3xs text-amber-700 font-semibold block mt-0.5">Confidence vs. Credibility Delta</span>
                 </div>
               </div>
 
               {/* Recharts Line Chart Container */}
-              <div id="confidence-credibility-linechart-container" className="w-full h-72 sm:h-80 pt-2">
-                {filteredTrendData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={filteredTrendData} margin={{ top: 14, right: 24, left: -15, bottom: 6 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                      <XAxis
-                        dataKey="timestamp"
-                        stroke="#94a3b8"
-                        fontSize={11}
-                        tickLine={false}
-                        dy={6}
+              <div id="confidence-credibility-linechart-container" className="w-full h-72 sm:h-80 pt-2 relative overflow-hidden transition-all duration-300">
+                {/* Top Subtle Shimmer Bar during Transition */}
+                <AnimatePresence>
+                  {isTrendTransitioning && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute top-0 left-0 right-0 h-0.5 z-20 overflow-hidden bg-indigo-50"
+                    >
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-emerald-500 rounded-full"
+                        initial={{ x: '-100%', width: '50%' }}
+                        animate={{ x: '220%' }}
+                        transition={{ repeat: Infinity, duration: 0.7, ease: 'easeInOut' }}
                       />
-                      <YAxis
-                        domain={[0, 100]}
-                        stroke="#94a3b8"
-                        fontSize={11}
-                        tickLine={false}
-                        ticks={[0, 25, 50, 75, 100]}
-                        unit="%"
-                      />
-                      <Tooltip content={<CustomTrendTooltip />} />
-                      <ReferenceLine
-                        y={50}
-                        stroke="#cbd5e1"
-                        strokeDasharray="4 4"
-                        label={{
-                          value: 'Credibility Threshold (50%)',
-                          fill: '#94a3b8',
-                          fontSize: 10,
-                          position: 'insideBottomRight'
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Transition Feedback Indicator Badge */}
+                <AnimatePresence>
+                  {isTrendTransitioning && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.92, y: -4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.92, y: -4 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute top-2 right-4 z-20 flex items-center gap-1.5 px-2.5 py-1 bg-white/95 backdrop-blur-xs border border-indigo-200 rounded-full shadow-xs text-3xs font-bold text-indigo-700 pointer-events-none"
+                    >
+                      <RefreshCw className="w-2.5 h-2.5 animate-spin text-indigo-600" />
+                      <span>Updating {trendTimeframe === '1h' ? 'Last Hour' : trendTimeframe === 'today' ? 'Today' : trendTimeframe === '7d' ? '7-Day' : 'All-Time'} Trend...</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Animated Chart Canvas Wrapper */}
+                <div
+                  key={`trend-wrapper-${trendTimeframe}-${trendFilter}`}
+                  className={`w-full h-full transition-all duration-300 ease-out ${
+                    isTrendTransitioning
+                      ? 'opacity-40 scale-[0.992] blur-[0.4px]'
+                      : 'opacity-100 scale-100 blur-none'
+                  }`}
+                >
+                  {filteredTrendData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={filteredTrendData}
+                        margin={{ top: 14, right: 24, left: -15, bottom: 6 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                        <XAxis
+                          dataKey="timestamp"
+                          stroke="#94a3b8"
+                          fontSize={11}
+                          tickLine={false}
+                          dy={6}
+                        />
+                        <YAxis
+                          domain={[0, 100]}
+                          stroke="#94a3b8"
+                          fontSize={11}
+                          tickLine={false}
+                          ticks={[0, 25, 50, 75, 100]}
+                          unit="%"
+                        />
+                        <Tooltip content={<CustomTrendTooltip />} />
+                        <ReferenceLine
+                          y={50}
+                          stroke="#cbd5e1"
+                          strokeDasharray="4 4"
+                          label={{
+                            value: 'Credibility Threshold (50%)',
+                            fill: '#94a3b8',
+                            fontSize: 10,
+                            position: 'insideBottomRight'
+                          }}
+                        />
+                        {showConfidenceLine && (
+                          <Line
+                            type="monotone"
+                            dataKey="confidence"
+                            name="Model Confidence (%)"
+                            stroke="#4f46e5"
+                            strokeWidth={2.5}
+                            isAnimationActive={true}
+                            animationDuration={450}
+                            animationEasing="ease-out"
+                            dot={{ r: 4, fill: '#4f46e5', strokeWidth: 0 }}
+                            activeDot={{ r: 7, fill: '#4338ca', stroke: '#ffffff', strokeWidth: 2 }}
+                          />
+                        )}
+                        {showCredibilityLine && (
+                          <Line
+                            type="monotone"
+                            dataKey="credibility"
+                            name="Credibility Score (0-100)"
+                            stroke="#059669"
+                            strokeWidth={2.5}
+                            isAnimationActive={true}
+                            animationDuration={450}
+                            animationEasing="ease-out"
+                            dot={{ r: 4, fill: '#059669', strokeWidth: 0 }}
+                            activeDot={{ r: 7, fill: '#047857', stroke: '#ffffff', strokeWidth: 2 }}
+                          />
+                        )}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-slate-50/70 rounded-xl border border-dashed border-slate-200 animate-in fade-in duration-200">
+                      <Filter className="w-8 h-8 text-slate-300 mb-2" />
+                      <p className="text-xs font-bold text-slate-700">No records match the selected filters</p>
+                      <p className="text-2xs text-slate-400 mt-1 max-w-sm">
+                        No audited records were found for timeframe "{trendTimeframe === '1h' ? 'Last Hour' : trendTimeframe === 'today' ? 'Today' : trendTimeframe === '7d' ? 'Last 7 Days' : 'All Time'}" with classification "{trendFilter === 'real' ? 'Real Only' : trendFilter === 'fake' ? 'Fake Only' : 'All'}".
+                      </p>
+                      <button
+                        id="reset-trend-filters-btn"
+                        type="button"
+                        onClick={() => {
+                          setTrendTimeframe('all');
+                          setTrendFilter('all');
                         }}
-                      />
-                      {showConfidenceLine && (
-                        <Line
-                          type="monotone"
-                          dataKey="confidence"
-                          name="Model Confidence (%)"
-                          stroke="#4f46e5"
-                          strokeWidth={2.5}
-                          dot={{ r: 4, fill: '#4f46e5', strokeWidth: 0 }}
-                          activeDot={{ r: 7, fill: '#4338ca', stroke: '#ffffff', strokeWidth: 2 }}
-                        />
-                      )}
-                      {showCredibilityLine && (
-                        <Line
-                          type="monotone"
-                          dataKey="credibility"
-                          name="Credibility Score (0-100)"
-                          stroke="#059669"
-                          strokeWidth={2.5}
-                          dot={{ r: 4, fill: '#059669', strokeWidth: 0 }}
-                          activeDot={{ r: 7, fill: '#047857', stroke: '#ffffff', strokeWidth: 2 }}
-                        />
-                      )}
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-slate-400 text-xs">
-                    No records match the current filter.
-                  </div>
-                )}
+                        className="mt-3 px-3 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 shadow-2xs cursor-pointer transition-all"
+                      >
+                        Reset All Filters
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Chart Interpretation Footer */}
@@ -1931,57 +2205,447 @@ Structured text ready to paste into research reports, emails, or fact-checking d
                 </div>
               </div>
 
-              {/* Accuracy Metrics Table */}
-              <div className="lg:col-span-8 bg-white rounded-2xl p-6 border border-slate-200 shadow-2xs space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                  Model Accuracy Metrics & Evaluation Matrix
-                </h3>
+              {/* Accuracy Metrics Table with Model Comparison Toggle */}
+              <div id="dashboard-model-comparison-card" className="lg:col-span-8 bg-white rounded-2xl p-6 border border-slate-200 shadow-2xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-indigo-600" />
+                      Model Accuracy Metrics & Evaluation Matrix
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Benchmarked on 2,940 stratified news articles across standard NLP evaluation criteria
+                    </p>
+                  </div>
+
+                  {/* Model Comparison Toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">
+                      Model Comparison:
+                    </span>
+                    <div className="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200 text-xs font-semibold">
+                      <button
+                        id="model-comparison-toggle-ensemble"
+                        type="button"
+                        onClick={() => setDashboardModelComparison('ensemble')}
+                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                          dashboardModelComparison === 'ensemble'
+                            ? 'bg-white text-indigo-900 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="View Ensemble performance metrics"
+                      >
+                        Ensemble
+                      </button>
+                      <button
+                        id="model-comparison-toggle-logisticRegression"
+                        type="button"
+                        onClick={() => setDashboardModelComparison('logisticRegression')}
+                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                          dashboardModelComparison === 'logisticRegression'
+                            ? 'bg-white text-indigo-900 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="View Logistic Regression performance metrics"
+                      >
+                        Logistic Regression
+                      </button>
+                      <button
+                        id="model-comparison-toggle-randomForest"
+                        type="button"
+                        onClick={() => setDashboardModelComparison('randomForest')}
+                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                          dashboardModelComparison === 'randomForest'
+                            ? 'bg-white text-indigo-900 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="View Random Forest performance metrics"
+                      >
+                        Random Forest
+                      </button>
+                      <button
+                        id="model-comparison-toggle-all"
+                        type="button"
+                        onClick={() => setDashboardModelComparison('all')}
+                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                          dashboardModelComparison === 'all'
+                            ? 'bg-white text-indigo-900 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="View side-by-side comparison of all models"
+                      >
+                        All Models
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Model Context Header Banner */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-indigo-600" />
+                    <span className="font-bold text-slate-800">
+                      {dashboardModelComparison === 'ensemble' && 'Viewing: Ensemble Voting Classifier (LR + RF)'}
+                      {dashboardModelComparison === 'logisticRegression' && 'Viewing: Logistic Regression (L2 Ridge, C=1.0)'}
+                      {dashboardModelComparison === 'randomForest' && 'Viewing: Random Forest (100 Gini Trees)'}
+                      {dashboardModelComparison === 'all' && 'Viewing: Side-by-Side Model Comparison Matrix'}
+                    </span>
+                  </div>
+                  <span className="text-slate-500 text-2xs font-medium">
+                    {dashboardModelComparison === 'ensemble' && 'Soft-voting calibration • 0.50 LR + 0.50 RF'}
+                    {dashboardModelComparison === 'logisticRegression' && 'L-BFGS solver • 5,000 TF-IDF features'}
+                    {dashboardModelComparison === 'randomForest' && 'Bagging ensemble • Non-linear splits'}
+                    {dashboardModelComparison === 'all' && '880 test split samples • Stratified cross-validation'}
+                  </span>
+                </div>
+
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs sm:text-sm">
-                    <thead className="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200">
-                      <tr>
-                        <th className="px-4 py-3">Metric</th>
-                        <th className="px-4 py-3">Logistic Regression</th>
-                        <th className="px-4 py-3">Random Forest</th>
-                        <th className="px-4 py-3">Ensemble</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      <tr>
-                        <td className="px-4 py-3 font-semibold text-slate-900">Accuracy</td>
-                        <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.logisticRegression.accuracy}%</td>
-                        <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.randomForest.accuracy}%</td>
-                        <td className="px-4 py-3 text-emerald-700 font-bold">96.8%</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-3 font-semibold text-slate-900">Precision</td>
-                        <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.logisticRegression.precision}%</td>
-                        <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.randomForest.precision}%</td>
-                        <td className="px-4 py-3 text-emerald-700 font-bold">96.5%</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-3 font-semibold text-slate-900">Recall</td>
-                        <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.logisticRegression.recall}%</td>
-                        <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.randomForest.recall}%</td>
-                        <td className="px-4 py-3 text-emerald-700 font-bold">97.1%</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-3 font-semibold text-slate-900">ROC-AUC</td>
-                        <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.logisticRegression.rocAuc}%</td>
-                        <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.randomForest.rocAuc}%</td>
-                        <td className="px-4 py-3 text-emerald-700 font-bold">0.991</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  {dashboardModelComparison === 'all' && (
+                    <table className="w-full text-left text-xs sm:text-sm">
+                      <thead className="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-3">Metric</th>
+                          <th className="px-4 py-3">Logistic Regression</th>
+                          <th className="px-4 py-3">Random Forest</th>
+                          <th className="px-4 py-3 text-indigo-900 bg-indigo-50/50">Ensemble (Champion)</th>
+                          <th className="px-4 py-3">Ensemble Advantage</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Accuracy</td>
+                          <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.logisticRegression.accuracy}%</td>
+                          <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.randomForest.accuracy}%</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold bg-indigo-50/20">96.8%</td>
+                          <td className="px-4 py-3 text-xs text-emerald-600 font-semibold">+2.2% over LR</td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Precision</td>
+                          <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.logisticRegression.precision}%</td>
+                          <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.randomForest.precision}%</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold bg-indigo-50/20">96.5%</td>
+                          <td className="px-4 py-3 text-xs text-emerald-600 font-semibold">+1.4% over LR</td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Recall</td>
+                          <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.logisticRegression.recall}%</td>
+                          <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.randomForest.recall}%</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold bg-indigo-50/20">97.1%</td>
+                          <td className="px-4 py-3 text-xs text-emerald-600 font-semibold">+2.6% over RF</td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">F1-Score</td>
+                          <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.logisticRegression.f1Score}%</td>
+                          <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.randomForest.f1Score}%</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold bg-indigo-50/20">96.8%</td>
+                          <td className="px-4 py-3 text-xs text-emerald-600 font-semibold">+2.4% over LR</td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">ROC-AUC</td>
+                          <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.logisticRegression.rocAuc}%</td>
+                          <td className="px-4 py-3 text-slate-700">{BENCHMARK_METRICS.randomForest.rocAuc}%</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold bg-indigo-50/20">99.1% (0.991)</td>
+                          <td className="px-4 py-3 text-xs text-emerald-600 font-semibold">+0.9% over LR</td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Specificity (TNR)</td>
+                          <td className="px-4 py-3 text-slate-700">95.0%</td>
+                          <td className="px-4 py-3 text-slate-700">92.0%</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold bg-indigo-50/20">96.4%</td>
+                          <td className="px-4 py-3 text-xs text-emerald-600 font-semibold">+1.4% over LR</td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Inference Latency</td>
+                          <td className="px-4 py-3 text-emerald-700 font-semibold">1.2 ms (Fastest)</td>
+                          <td className="px-4 py-3 text-slate-700">4.8 ms</td>
+                          <td className="px-4 py-3 text-slate-700 bg-indigo-50/20">5.4 ms</td>
+                          <td className="px-4 py-3 text-xs text-slate-500 font-medium">Real-time client</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  )}
+
+                  {dashboardModelComparison === 'ensemble' && (
+                    <table className="w-full text-left text-xs sm:text-sm">
+                      <thead className="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-3">Metric</th>
+                          <th className="px-4 py-3 text-indigo-900">Ensemble Value</th>
+                          <th className="px-4 py-3">Baseline Target</th>
+                          <th className="px-4 py-3">Variance vs Baselines</th>
+                          <th className="px-4 py-3">Verification Rating</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Overall Accuracy</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold text-base">96.8%</td>
+                          <td className="px-4 py-3 text-slate-600">95.0%</td>
+                          <td className="px-4 py-3 text-emerald-600 font-semibold">+2.2% vs LR, +3.6% vs RF</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">Optimal</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Precision (PPV)</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold">96.5%</td>
+                          <td className="px-4 py-3 text-slate-600">94.0%</td>
+                          <td className="px-4 py-3 text-emerald-600 font-semibold">+1.4% vs LR, +4.1% vs RF</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">Low FP Risk</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Recall / Sensitivity</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold">97.1%</td>
+                          <td className="px-4 py-3 text-slate-600">95.0%</td>
+                          <td className="px-4 py-3 text-emerald-600 font-semibold">+3.3% vs LR, +2.6% vs RF</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">Superior Catch</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">F1-Score</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold">96.8%</td>
+                          <td className="px-4 py-3 text-slate-600">94.5%</td>
+                          <td className="px-4 py-3 text-emerald-600 font-semibold">+2.4% vs LR, +3.4% vs RF</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">Best Balance</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">ROC-AUC</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold">0.991 (99.1%)</td>
+                          <td className="px-4 py-3 text-slate-600">0.980</td>
+                          <td className="px-4 py-3 text-emerald-600 font-semibold">+0.009 vs LR, +0.015 vs RF</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">Near Perfect</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Specificity (TNR)</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold">96.4%</td>
+                          <td className="px-4 py-3 text-slate-600">93.0%</td>
+                          <td className="px-4 py-3 text-emerald-600 font-semibold">+1.4% vs LR, +4.4% vs RF</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">Preserves Real</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Inference Latency</td>
+                          <td className="px-4 py-3 text-slate-800 font-bold">5.4 ms</td>
+                          <td className="px-4 py-3 text-slate-600">&lt; 20.0 ms</td>
+                          <td className="px-4 py-3 text-slate-500 font-medium">+4.2 ms vs LR single-pass</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold">Real-Time</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  )}
+
+                  {dashboardModelComparison === 'logisticRegression' && (
+                    <table className="w-full text-left text-xs sm:text-sm">
+                      <thead className="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-3">Metric</th>
+                          <th className="px-4 py-3 text-indigo-900">Logistic Regression Value</th>
+                          <th className="px-4 py-3">Ensemble Benchmark</th>
+                          <th className="px-4 py-3">Variance vs Ensemble</th>
+                          <th className="px-4 py-3">Model Evaluation</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Overall Accuracy</td>
+                          <td className="px-4 py-3 text-indigo-900 font-bold text-base">{BENCHMARK_METRICS.logisticRegression.accuracy}%</td>
+                          <td className="px-4 py-3 text-slate-600">96.8%</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">-2.2%</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold">High Precision</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Precision (PPV)</td>
+                          <td className="px-4 py-3 text-indigo-900 font-bold">{BENCHMARK_METRICS.logisticRegression.precision}%</td>
+                          <td className="px-4 py-3 text-slate-600">96.5%</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">-1.4%</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">Sharp Separation</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Recall / Sensitivity</td>
+                          <td className="px-4 py-3 text-indigo-900 font-bold">{BENCHMARK_METRICS.logisticRegression.recall}%</td>
+                          <td className="px-4 py-3 text-slate-600">97.1%</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">-3.3%</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-bold">Solid Detection</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">F1-Score</td>
+                          <td className="px-4 py-3 text-indigo-900 font-bold">{BENCHMARK_METRICS.logisticRegression.f1Score}%</td>
+                          <td className="px-4 py-3 text-slate-600">96.8%</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">-2.4%</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold">Well-Calibrated</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">ROC-AUC</td>
+                          <td className="px-4 py-3 text-indigo-900 font-bold">{BENCHMARK_METRICS.logisticRegression.rocAuc}% (0.982)</td>
+                          <td className="px-4 py-3 text-slate-600">0.991</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">-0.009</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">Convex Curve</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Specificity (TNR)</td>
+                          <td className="px-4 py-3 text-indigo-900 font-bold">95.0%</td>
+                          <td className="px-4 py-3 text-slate-600">96.4%</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">-1.4%</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-bold">Low FP Margin</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Inference Latency</td>
+                          <td className="px-4 py-3 text-emerald-700 font-bold">1.2 ms</td>
+                          <td className="px-4 py-3 text-slate-600">5.4 ms</td>
+                          <td className="px-4 py-3 text-emerald-600 font-bold">-4.2 ms (4.5x faster)</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">Fastest Model</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  )}
+
+                  {dashboardModelComparison === 'randomForest' && (
+                    <table className="w-full text-left text-xs sm:text-sm">
+                      <thead className="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-3">Metric</th>
+                          <th className="px-4 py-3 text-indigo-900">Random Forest Value</th>
+                          <th className="px-4 py-3">Ensemble Benchmark</th>
+                          <th className="px-4 py-3">Variance vs Ensemble</th>
+                          <th className="px-4 py-3">Model Evaluation</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Overall Accuracy</td>
+                          <td className="px-4 py-3 text-indigo-900 font-bold text-base">{BENCHMARK_METRICS.randomForest.accuracy}%</td>
+                          <td className="px-4 py-3 text-slate-600">96.8%</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">-3.6%</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold">Robust Trees</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Precision (PPV)</td>
+                          <td className="px-4 py-3 text-indigo-900 font-bold">{BENCHMARK_METRICS.randomForest.precision}%</td>
+                          <td className="px-4 py-3 text-slate-600">96.5%</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">-4.1%</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-bold">Noise Resilient</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Recall / Sensitivity</td>
+                          <td className="px-4 py-3 text-indigo-900 font-bold">{BENCHMARK_METRICS.randomForest.recall}%</td>
+                          <td className="px-4 py-3 text-slate-600">97.1%</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">-2.6%</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">High Sensitivity</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">F1-Score</td>
+                          <td className="px-4 py-3 text-indigo-900 font-bold">{BENCHMARK_METRICS.randomForest.f1Score}%</td>
+                          <td className="px-4 py-3 text-slate-600">96.8%</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">-3.4%</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold">Non-Linear Balance</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">ROC-AUC</td>
+                          <td className="px-4 py-3 text-indigo-900 font-bold">{BENCHMARK_METRICS.randomForest.rocAuc}% (0.976)</td>
+                          <td className="px-4 py-3 text-slate-600">0.991</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">-0.015</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">Wide Margins</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Specificity (TNR)</td>
+                          <td className="px-4 py-3 text-indigo-900 font-bold">92.0%</td>
+                          <td className="px-4 py-3 text-slate-600">96.4%</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">-4.4%</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-bold">Good Retention</span></td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 font-semibold text-slate-900">Inference Latency</td>
+                          <td className="px-4 py-3 text-slate-800 font-bold">4.8 ms</td>
+                          <td className="px-4 py-3 text-slate-600">5.4 ms</td>
+                          <td className="px-4 py-3 text-emerald-600 font-semibold">-0.6 ms (1.1x faster)</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold">Tree Traversals</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                {/* Confusion Matrix & Parameters Breakdown */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                  <div>
+                    <span className="text-slate-500 text-2xs block font-medium">True Positives (Real Correct)</span>
+                    <span className="text-base font-black text-emerald-700">
+                      {dashboardModelComparison === 'ensemble' && '428 / 441 (97.1%)'}
+                      {dashboardModelComparison === 'logisticRegression' && `${BENCHMARK_METRICS.logisticRegression.confusionMatrix[0][0]} / 441 (95.2%)`}
+                      {dashboardModelComparison === 'randomForest' && `${BENCHMARK_METRICS.randomForest.confusionMatrix[0][0]} / 441 (92.5%)`}
+                      {dashboardModelComparison === 'all' && '428 (Ensemble) • 420 (LR)'}
+                    </span>
+                    <span className="text-3xs text-emerald-600 font-semibold block mt-0.5">Legitimate News Preserved</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-2xs block font-medium">True Negatives (Fake Neutralized)</span>
+                    <span className="text-base font-black text-indigo-900">
+                      {dashboardModelComparison === 'ensemble' && '425 / 439 (96.8%)'}
+                      {dashboardModelComparison === 'logisticRegression' && `${BENCHMARK_METRICS.logisticRegression.confusionMatrix[1][1]} / 439 (93.6%)`}
+                      {dashboardModelComparison === 'randomForest' && `${BENCHMARK_METRICS.randomForest.confusionMatrix[1][1]} / 439 (94.3%)`}
+                      {dashboardModelComparison === 'all' && '425 (Ensemble) • 414 (RF)'}
+                    </span>
+                    <span className="text-3xs text-indigo-700 font-semibold block mt-0.5">Disinformation Intercepted</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-2xs block font-medium">False Positives (False Alarms)</span>
+                    <span className="text-base font-black text-rose-700">
+                      {dashboardModelComparison === 'ensemble' && '14 / 439 (3.2%)'}
+                      {dashboardModelComparison === 'logisticRegression' && `${BENCHMARK_METRICS.logisticRegression.confusionMatrix[0][1]} / 439 (5.0%)`}
+                      {dashboardModelComparison === 'randomForest' && `${BENCHMARK_METRICS.randomForest.confusionMatrix[0][1]} / 439 (7.7%)`}
+                      {dashboardModelComparison === 'all' && '14 (Ensemble Lowest)'}
+                    </span>
+                    <span className="text-3xs text-rose-600 font-semibold block mt-0.5">Real Flagged as Fake</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-2xs block font-medium">Architecture / Solvers</span>
+                    <span className="text-base font-black text-slate-800">
+                      {dashboardModelComparison === 'ensemble' && 'Soft Voting Combiner'}
+                      {dashboardModelComparison === 'logisticRegression' && 'L2 Ridge (C=1.0)'}
+                      {dashboardModelComparison === 'randomForest' && '100 Gini Trees'}
+                      {dashboardModelComparison === 'all' && '5k TF-IDF N-Grams'}
+                    </span>
+                    <span className="text-3xs text-slate-500 font-semibold block mt-0.5">
+                      {dashboardModelComparison === 'ensemble' && 'ArgMax P(Real) vs P(Fake)'}
+                      {dashboardModelComparison === 'logisticRegression' && 'L-BFGS Convex Optimizer'}
+                      {dashboardModelComparison === 'randomForest' && 'Sub-sampling with Bagging'}
+                      {dashboardModelComparison === 'all' && 'Cross-validated 5-Fold'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Historical Verification Activity Log */}
             <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-2xs">
-              <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Analysis History Log</h3>
-                <span className="text-xs text-slate-400 font-mono">{history.length} records</span>
+              <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Analysis History Log</h3>
+                  <span className="text-xs text-slate-400 font-mono">({history.length} records)</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    id="export-analysis-history-csv-btn"
+                    type="button"
+                    onClick={handleExportHistoryCsv}
+                    disabled={history.length === 0}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border shadow-2xs cursor-pointer ${
+                      csvExported
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                        : 'bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 border-slate-300'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    title="Export Analysis History Log table as a CSV file"
+                  >
+                    {csvExported ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-emerald-700 font-bold">CSV Exported!</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Export CSV</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
