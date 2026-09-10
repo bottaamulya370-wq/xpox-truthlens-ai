@@ -1,0 +1,6 @@
+{
+  "name": "TruthLens AI – Fake News Detection and Credibility Analysis System",
+  "description": "AI-powered fake news detection and credibility analysis platform featuring real-time live news wire feed, instant as-you-type NLP verification, live web URL scanner, explainable AI keyword highlighting, metrics dashboard, and PDF report generation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
